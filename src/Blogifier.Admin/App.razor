@@ -1,0 +1,42 @@
+@using System.Reflection
+@using LazyShared.Services.Abstractions
+@using Microsoft.AspNetCore.Components.Routing
+@using Microsoft.Extensions.Logging
+@inject ILazyLoadService LazyLoadService
+
+<CascadingAuthenticationState>
+	<Router AppAssembly="@typeof(Program).Assembly" PreferExactMatches="@true"
+            OnNavigateAsync="@OnNavigateAsync"AdditionalAssemblies="@lazyLoadedAssemblies" >
+		<Found Context="routeData">
+			<RouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)" />
+		</Found>
+		<NotFound>
+			<LayoutView Layout="@typeof(MainLayout)">
+				<p>Sorry, there's nothing at this address.</p>
+			</LayoutView>
+		</NotFound>
+	</Router>
+</CascadingAuthenticationState>
+
+@code {
+    private List<Assembly> lazyLoadedAssemblies = new();
+
+    private async Task OnNavigateAsync(NavigationContext args)
+    {
+        try
+        {
+            var assembliesToLoad = await LazyLoadService.LoadAssembliesAsync(args.Path);
+
+            if (assembliesToLoad.Any())
+            {
+                Console.WriteLine("LazyLoaded: " + string.Join(",", assembliesToLoad.Select(p => p.FullName)));
+
+                lazyLoadedAssemblies.AddRange(assembliesToLoad);
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("Error: {Message}", ex.Message);
+        }
+    }
+}
